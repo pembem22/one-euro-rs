@@ -21,7 +21,7 @@ use num_traits::float::FloatConst;
 /// one_euro.filter(1.04);
 /// one_euro.filter(0.00);
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct OneEuroFilter<T: FloatCore> {
     pub configuration: OneEuroFilterConfiguration<T>,
 
@@ -59,7 +59,7 @@ impl<T: FloatCore> OneEuroFilter<T> {
 }
 
 /// Configuration parameters of a One Euro Filter.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct OneEuroFilterConfiguration<T> {
     pub frequency: T,
     pub cutoff_min: T,
@@ -67,7 +67,7 @@ pub struct OneEuroFilterConfiguration<T> {
     pub beta: T,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 struct LowPassFilter<T> {
     x_prev_hat: T,
     x_prev: T,
@@ -131,6 +131,13 @@ impl<T: FloatCore + FloatConst> OneEuroFilter<T> {
             self.frequency = T::one() / (timestamp - time);
         }
         self.time_last = Some(timestamp);
+        self.filter(value)
+    }
+
+    pub fn filter_with_delta(&mut self, value: T, delta: T) -> T {        
+        self.frequency = T::one() / delta;
+        // TODO: won't work well if mixed with the method above.
+        self.time_last = Some(T::zero());
         self.filter(value)
     }
 }
@@ -7342,8 +7349,8 @@ mod tests {
             ),
         ];
 
-        for (timestamp, _signal, noisy, filtered) in reference_data.into_iter() {
-            assert_eq!(filter.filter_with_timestamp(*noisy, *timestamp), *filtered);
+        for (timestamp, _signal, noisy, filtered) in reference_data {
+            assert_eq!(filter.filter_with_timestamp(noisy, timestamp), filtered);
         }
     }
 }
